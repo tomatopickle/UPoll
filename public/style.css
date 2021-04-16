@@ -1,0 +1,36 @@
+#polls{
+  margin: 25px;
+  position: relative;
+  top: 0 !important;
+}
+#polls .v-sheet.v-card{
+ margin: 5px;
+ display: inline-block !important;
+}
+.ms-DocumentCard:hover{
+  box-shadow: rgb(6, 3, 21) 0px 7px 29px 0px;
+}
+nav{
+  display: flex;
+  box-shadow: rgba(0, 0, 0, 0.28) 0px 7px 29px 0px;
+  padding: 5px;
+  margin: 0;
+  position: fixed;
+  top: 15px;
+  left: 0;
+  right: 0;
+  height: 36px;
+}
+nav h2{
+  width: 80%;
+  position: relative;
+  font-size: 25px;
+  bottom: 24px;
+}
+.center{
+  margin: auto;
+  display: block;
+}
+html,body{
+  font-family: Roboto,sans-serif;
+}

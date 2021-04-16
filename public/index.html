@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <title>UPoll</title>
+</head>
+<body>
+<div id="app">
+  <v-app>
+    <v-progress-linear style="height: 4px;position: absolute;top: 0px;right: 0px;left: 0px;z-index: 500;display: none;" v-show="loading" indeterminate :color="search?'deep-purple':'white'" class="mb-0"></v-progress-linear>
+    <div>
+    <v-toolbar
+      :color="search==true ? 'grey darken-4' : 'deep-purple accent-4'"
+      dense
+      dark
+    >
+      <v-toolbar-title>
+       {{search ? ``:"UPoll"}}
+      </v-toolbar-title>
+      <v-slide-y-transition hide-on-leave>
+      <v-text-field @input="searchPoll($event)" style="position:relative;top:15px;box-shadow:none;width:80%;"  v-show="search"
+              solo
+              color="deep-purple accent-4"
+              label="Search"
+              prepend-inner-icon="mdi-magnify">
+      </v-text-field>
+      </v-slide-y-transition>
+      <v-spacer></v-spacer>
+      <v-btn   icon @click="search = search ? false:true;closeSearch()" :color="search==false ? 'white' : 'deep-purple accent-4'">
+        <v-icon>{{search ? 'mdi-close':'mdi-magnify'}}</v-icon>
+      </v-btn>
+      <v-btn v-show="loggedIn" @click.stop="dialog = true">
+        Make a Poll
+      </v-btn>
+      <v-btn v-show="!loggedIn" href="/login">
+        Login
+      </v-btn>
+      <v-tooltip bottom>
+      <template v-slot:activator="{ on, attrs }">
+      <v-btn v-bind="attrs"
+          v-on="on" text v-show="loggedIn" href="/logout">
+        <v-icon>
+          mdi-logout
+        </v-icon>
+      </v-btn>
+      </template>
+      <span>Logout</span>
+       </v-tooltip>
+    </v-toolbar>
+    </div>
+<v-dialog v-model="dialog"  max-width="50vw" >
+   <v-card>
+      <v-card-title class="headline">Make a Poll</v-card-title>
+      <v-card-text>
+        <v-text-field v-model="newPollTitle" label="Name of Poll" @input="changed()" placeholder="Oreos or Cookies" outlined></v-text-field>
+        <v-combobox placeholder="Press Enter or Tab to add option, add atleast two" multiple @input="changed()"
+                    v-model = "select"
+                    label="Options" 
+                    append-icon
+                    chips outlined
+                    deletable-chips
+                    >
+          </v-combobox>
+      </v-card-text>
+      <v-card-actions>
+         <v-spacer></v-spacer>
+         <v-btn color="grey darken" text @click="dialog = false;" >Cancel</v-btn>
+         <v-btn :disabled="!formValid" color="teal accent-4" text @click="dialog = false;makePoll()" >Make Poll</v-btn>
+      </v-card-actions>
+   </v-card>
+</v-dialog>
+<v-dialog v-model="pollDialog"  max-width="50vw">
+  <v-scale-transition>
+    <v-progress-linear v-show="loadingPollModal" indeterminate color="deep-purple" class="mb-0"></v-progress-linear>
+  </v-scale-transition>
+      <v-card>
+      <v-card-title class="headline">{{pollTitle}}</v-card-title>
+      <v-card-text>
+       <img class="center" :src="chart" height="275" />
+       <v-select @input="voteIndex($event)"
+          :items="options"
+          :placeholder="options[0]"
+          solo
+        ></v-select>
+       <v-btn :disabled="voted" @click="vote()" style="margin:auto;display:block;" large style="position:relative;right:10px;"   color="teal accent-4">
+         {{voted? "Voted" : "Vote"}}
+       </v-btn>
+      </v-card-text>
+      <v-card-actions>
+         <v-spacer></v-spacer>
+         <v-btn  color="grey" text @click="closePoll()" >Close</v-btn>
+         <v-btn @click="copyurl()"  text color="teal">Copy link</v-btn>
+         <v-btn @click="like()" :disabled="liked"  outlined color="pink lighten-2" >{{liked? "Liked" : "Like"}}</v-btn>
+      </v-card-actions>
+   </v-card>
+</v-dialog>
+<v-slide-y-transition>
+<v-banner v-show="logBanner" single-line elevation="1" sticky>
+  Please login to vote and make polls 
+   <template v-slot:actions>
+     <v-btn
+          text
+          color="primary"
+          @click="dismissLogBanner"
+        >
+          Dismiss
+        </v-btn>
+     <v-btn 
+          color="deep-purple accent-4" href="/login">
+          Login
+      </v-btn>
+   </template>    
+</v-banner>
+</v-slide-y-transition>
+<v-slide-y-transition>
+<template>
+  <v-card v-show="!search">
+   <v-tabs color="deep-purple accent-4" flat>
+    <v-tab @click="latest()">Latest</v-tab>
+    <v-tab @click="loved()">Loved</v-tab>
+    <v-tab @click="popular()">Popular</v-tab>
+    <v-tab @click="best()">Best</v-tab>
+   </v-tabs>
+  </v-card>
+</template>
+</v-slide-y-transition>
+    <div style="position:relatve !important;top:-75px;" id="polls">
+     <v-card width="250" v-for="item in res">
+       <v-img :src="item.src" height="150"></v-img>
+       <v-card-title class="title">
+         {{item.title}}
+       </v-card-title> 
+       <v-card-text>
+      <v-btn :disabled="!loggedIn" v-on:click="opnPoll(item._id)" style="position:relative;right:10px;" text outlined depressed  color="teal accent-4">
+         Vote
+       </v-btn>
+      <v-icon class="mr-1">mdi-heart</v-icon>
+      <span class="subheading mr-2">{{item.hearts}}</span>
+      <span class="mr-1">·</span>
+      <v-icon class="mr-1">mdi-poll</v-icon>
+      <span class="subheading">{{item.voteNumb}}</span>
+       </v-card-text>
+      </v-card>
+      <v-snackbar v-model="snackbar">
+        {{snackbarText}}
+       <template v-slot:action="{ attrs }">
+        <v-btn
+          color="pink"
+          text
+          v-bind="attrs"
+          @click="snackbar = false"
+        >
+          Close
+        </v-btn>
+      </template>
+    </v-snackbar>
+    </div>
+ </v-app>
+</div>
+ <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+<script   src="script.js"></script>
+</body>
+</html>
