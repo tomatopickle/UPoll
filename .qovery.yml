@@ -1,0 +1,11 @@
+---
+application:
+  name: "upoll"
+  project: "UPoll"
+  organization: "QoveryCommunity"
+routers:
+- name: "main-upoll"
+  routes:
+  - application_name: "upoll"
+    paths:
+    - "/*"
